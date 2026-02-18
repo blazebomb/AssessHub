@@ -7,6 +7,7 @@ import Select from '../../components/ui/Select';
 import Spinner from '../../components/ui/Spinner';
 import toast from 'react-hot-toast';
 import { Users as UsersIcon } from 'lucide-react';
+import { roleLabel } from '../../utils/roleLabel';
 
 export default function UsersPage() {
   const [users, setUsers] = useState([]);
@@ -79,7 +80,7 @@ export default function UsersPage() {
                   <td className="py-3 px-2 text-text-light">{user.email}</td>
                   <td className="py-3 px-2 text-text-light">{user.teamName || '-'}</td>
                   <td className="py-3 px-2">
-                    <Badge variant={roleVariant(user.role)}>{user.role}</Badge>
+                    <Badge variant={roleVariant(user.role)}>{roleLabel(user.role)}</Badge>
                   </td>
                   <td className="py-3 px-2">
                     {editingId === user.id ? (
@@ -93,7 +94,7 @@ export default function UsersPage() {
                           <option value="ADMIN">Admin</option>
                           <option value="TRAINEE">Trainee</option>
                           <option value="INTERN">Intern</option>
-                          <option value="PPO">PPO</option>
+                          <option value="PPO">Full-time</option>
                           <option value="TL">Team Lead</option>
                           <option value="TR">Team Representative</option>
                         </select>

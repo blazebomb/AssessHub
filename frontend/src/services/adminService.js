@@ -8,4 +8,5 @@ export const adminService = {
   changeUserRole: (userId, data) => api.put(`/admin/users/${userId}/role`, data),
   getAllUsers: () => api.get('/admin/users'),
   getAllTeams: () => api.get('/admin/teams'),
+  generateAiQuestions: (data) => api.post('/admin/ai-questions', data),
 };

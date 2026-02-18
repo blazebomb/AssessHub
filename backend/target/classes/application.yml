@@ -2,10 +2,13 @@ spring:
   application:
     name: assessment-platform
 
+  profiles:
+    active: local
+
   datasource:
-    url: jdbc:mysql://localhost:3306/assessment_platform?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-    username: root
-    password: 12345678
+    url: ${DB_URL:jdbc:mysql://localhost:3306/assessment_platform?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:12345678}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
@@ -30,6 +33,12 @@ spring:
             enable: true
 
 app:
+  answer-key:
+    secret: ${ANSWER_KEY_SECRET:}
+  ai:
+    gemini:
+      api-key: ${GEMINI_API_KEY:}
+      model: ${GEMINI_MODEL:auto}
   jwt:
     secret: ${JWT_SECRET:YTJiM2M0ZDVlNmY3ZzhoOWkwajFrMmwzbTRuNW82cDdxOHI5czB0MXUydjN3NHg1eTZ6N2E4YjljMGQxZTJm}
     expiration-ms: 86400000

@@ -33,9 +33,9 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('user');
   };
 
-  const isAdmin = () => user?.role === 'ADMIN' || user?.role === 'TL';
+  const isAdmin = () => ['ADMIN', 'TL', 'TR'].includes(user?.role);
   const isUser = () => ['TRAINEE', 'INTERN', 'PPO', 'TL', 'TR'].includes(user?.role);
-  const isAdminOrTL = () => user?.role === 'ADMIN' || user?.role === 'TL';
+  const isAdminOrTL = () => ['ADMIN', 'TL', 'TR'].includes(user?.role);
 
   return (
     <AuthContext.Provider value={{ user, token, loading, login, logout, isAdmin, isUser, isAdminOrTL }}>

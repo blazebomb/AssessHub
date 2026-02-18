@@ -2,10 +2,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { testService } from '../../services/testService';
 import Button from '../../components/ui/Button';
-import Card from '../../components/ui/Card';
 import Spinner from '../../components/ui/Spinner';
 import toast from 'react-hot-toast';
-import { Clock, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
+import { Clock, ChevronLeft, ChevronRight, AlertTriangle, Flag, CheckCircle2 } from 'lucide-react';
 
 export default function TakeTestPage() {
   const { id } = useParams();
@@ -13,7 +12,8 @@ export default function TakeTestPage() {
   const [test, setTest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentQ, setCurrentQ] = useState(0);
-  const [answers, setAnswers] = useState({}); // { questionId: [optionId1, optionId2] } for multi-correct, { questionId: optionId } for single
+  const [answers, setAnswers] = useState({});
+  const [flaggedQuestions, setFlaggedQuestions] = useState(new Set());
   const [timeLeft, setTimeLeft] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -49,7 +49,6 @@ export default function TakeTestPage() {
 
     const answersPayload = test.questions.map((q) => {
       const answer = answers[q.id];
-      // Handle both single (number) and multi (array) selections
       const selectedOptionIds = Array.isArray(answer) ? answer : (answer ? [answer] : []);
       
       return {
@@ -70,7 +69,6 @@ export default function TakeTestPage() {
     } catch (err) {
       const errorMsg = err.response?.data?.message || err.message || 'Failed to submit test';
       toast.error(errorMsg);
-      // Don't navigate on error - let user retry
     } finally {
       setSubmitting(false);
     }
@@ -100,21 +98,29 @@ export default function TakeTestPage() {
       const currentAnswer = prev[questionId];
       
       if (isMultiCorrect) {
-        // Multi-correct: use array
         const currentArray = Array.isArray(currentAnswer) ? currentAnswer : (currentAnswer ? [currentAnswer] : []);
         const isSelected = currentArray.includes(optionId);
         
         if (isSelected) {
-          // Deselect
           return { ...prev, [questionId]: currentArray.filter(id => id !== optionId) };
         } else {
-          // Select
           return { ...prev, [questionId]: [...currentArray, optionId] };
         }
       } else {
-        // Single-correct: replace selection
         return { ...prev, [questionId]: optionId };
       }
+    });
+  };
+
+  const toggleFlag = (questionId) => {
+    setFlaggedQuestions(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(questionId)) {
+        newSet.delete(questionId);
+      } else {
+        newSet.add(questionId);
+      }
+      return newSet;
     });
   };
 
@@ -132,135 +138,200 @@ export default function TakeTestPage() {
   const isMultiCorrect = question.multiCorrect || false;
   const answeredCount = Object.keys(answers).filter(qId => {
     const answer = answers[qId];
-    if (Array.isArray(answer)) {
-      return answer.length > 0;
-    }
-    return answer != null;
+    return Array.isArray(answer) ? answer.length > 0 : answer != null;
   }).length;
 
+  const getQuestionStatus = (q) => {
+    const answer = answers[q.id];
+    const isAnswered = Array.isArray(answer) ? answer.length > 0 : answer != null;
+    const isFlagged = flaggedQuestions.has(q.id);
+    
+    if (isFlagged) return 'flagged';
+    if (isAnswered) return 'answered';
+    return 'unanswered';
+  };
+
   return (
-    <div className="max-w-3xl mx-auto">
-      {/* Timer bar */}
-      <div className={`sticky top-0 z-40 bg-surface border-b border-border p-4 rounded-b-xl shadow-sm mb-6 flex items-center justify-between ${isLowTime ? 'bg-red-50' : ''}`}>
-        <div>
-          <h2 className="font-semibold text-text">{test.title}</h2>
-          <p className="text-sm text-text-light">
-            Question {currentQ + 1} of {test.questions.length} • {answeredCount}/{test.questions.length} answered
-          </p>
-        </div>
-        <div className={`flex items-center gap-2 text-lg font-mono font-bold ${isLowTime ? 'text-danger animate-pulse' : 'text-text'}`}>
-          <Clock className="w-5 h-5" />
-          {formatTime(timeLeft)}
+    <div className="h-screen flex flex-col bg-gray-50">
+      {/* Top Header */}
+      <div className={`sticky top-0 z-40 ${isLowTime ? 'bg-red-600' : 'bg-blue-600'} text-white p-4 shadow-md`}>
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold">{test.title}</h1>
+            <p className="text-blue-100 text-sm">
+              Question {currentQ + 1} of {test.questions.length} • {answeredCount}/{test.questions.length} answered
+            </p>
+          </div>
+          <div className={`flex items-center gap-3 px-4 py-2 rounded-lg ${isLowTime ? 'bg-red-500' : 'bg-blue-700'}`}>
+            <Clock className="w-5 h-5" />
+            <span className="text-2xl font-mono font-bold">{formatTime(timeLeft)}</span>
+          </div>
         </div>
       </div>
 
-      {/* Question navigation pills */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        {test.questions.map((q, i) => {
-          const answer = answers[q.id];
-          const isAnswered = Array.isArray(answer) ? answer.length > 0 : answer != null;
+      {/* Main Content */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left Sidebar - Question Navigator */}
+        <div className="w-32 lg:w-40 bg-white border-r border-gray-200 p-4 overflow-y-auto">
+          <div className="mb-4">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Questions</p>
+          </div>
           
-          return (
-            <button
-              key={q.id}
-              onClick={() => setCurrentQ(i)}
-              className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
-                i === currentQ
-                  ? 'bg-primary text-white'
-                  : isAnswered
-                  ? 'bg-primary/10 text-primary'
-                  : 'bg-gray-100 text-text-light hover:bg-gray-200'
-              }`}
-            >
-              {i + 1}
-            </button>
-          );
-        })}
-      </div>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+            {test.questions.map((q, i) => {
+              const status = getQuestionStatus(q);
+              
+              let bgClass = 'bg-gray-100 text-gray-700 hover:bg-gray-200';
+              if (status === 'answered') {
+                bgClass = 'bg-green-100 text-green-700 border border-green-300';
+              } else if (status === 'flagged') {
+                bgClass = 'bg-amber-100 text-amber-700 border-2 border-amber-400';
+              }
+              if (i === currentQ) {
+                bgClass = 'bg-blue-600 text-white border-2 border-blue-700';
+              }
+              
+              return (
+                <button
+                  key={q.id}
+                  onClick={() => setCurrentQ(i)}
+                  className={`w-full h-10 rounded-lg font-semibold text-sm transition-all ${bgClass}`}
+                  title={`Question ${i + 1}${status === 'flagged' ? ' (Flagged)' : status === 'answered' ? ' (Answered)' : ''}`}
+                >
+                  {i + 1}
+                </button>
+              );
+            })}
+          </div>
 
-      {/* Question card */}
-      <Card className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-lg font-medium">{question.questionText}</p>
-          {isMultiCorrect && (
-            <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
-              Multiple answers allowed
-            </span>
-          )}
+          {/* Legend */}
+          <div className="mt-6 pt-4 border-t border-gray-200 space-y-2 text-xs">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-blue-600"></div>
+              <span className="text-gray-600">Current</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-green-100 border border-green-300"></div>
+              <span className="text-gray-600">Answered</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-amber-100 border border-amber-400"></div>
+              <span className="text-gray-600">Flagged</span>
+            </div>
+          </div>
         </div>
 
-        <div className="space-y-3">
-          {question.options.map((option) => {
-            const answer = answers[question.id];
-            const isSelected = isMultiCorrect
-              ? (Array.isArray(answer) && answer.includes(option.id))
-              : (answer === option.id);
-            
-            return (
-              <label
-                key={option.id}
-                className={`flex items-center gap-3 w-full text-left p-4 rounded-lg border-2 transition-all cursor-pointer ${
-                  isSelected
-                    ? 'border-primary bg-primary/5 text-primary'
-                    : 'border-border hover:border-primary/30 hover:bg-gray-50'
-                }`}
-                onClick={(e) => {
-                  // Prevent double-triggering when clicking the label
-                  if (e.target.tagName !== 'INPUT') {
-                    e.preventDefault();
-                    selectOption(question.id, option.id, isMultiCorrect);
-                  }
-                }}
-              >
-                <input
-                  type={isMultiCorrect ? 'checkbox' : 'radio'}
-                  name={isMultiCorrect ? `question-${question.id}-${option.id}` : `question-${question.id}`}
-                  checked={isSelected}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    selectOption(question.id, option.id, isMultiCorrect);
-                  }}
-                  className={`w-5 h-5 cursor-pointer ${
-                    isMultiCorrect 
-                      ? 'rounded border-gray-300 text-primary focus:ring-primary' 
-                      : 'border-gray-300 text-primary focus:ring-primary'
+        {/* Main Question Area */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-3xl mx-auto p-6 lg:p-8">
+            {/* Question Card */}
+            <div className="bg-white rounded-xl p-6 lg:p-8 shadow-sm border border-gray-200 mb-6">
+              <div className="flex items-start justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 flex-1">{question.questionText}</h2>
+                <button
+                  onClick={() => toggleFlag(question.id)}
+                  className={`p-2 rounded-lg transition-colors ${
+                    flaggedQuestions.has(question.id)
+                      ? 'bg-amber-100 text-amber-600'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
-                />
-                <span className="text-sm flex-1 cursor-pointer">{option.optionText}</span>
-              </label>
-            );
-          })}
+                  title="Flag for review"
+                >
+                  <Flag className="w-5 h-5" />
+                </button>
+              </div>
+
+              {isMultiCorrect && (
+                <div className="mb-6 p-3 bg-blue-50 border-l-4 border-blue-600 rounded">
+                  <p className="text-sm text-blue-900 font-medium">
+                    💡 This question has multiple correct answers. Select all that apply.
+                  </p>
+                </div>
+              )}
+
+              {/* Options */}
+              <div className="space-y-3">
+                {question.options.map((option, idx) => {
+                  const answer = answers[question.id];
+                  const isSelected = isMultiCorrect
+                    ? (Array.isArray(answer) && answer.includes(option.id))
+                    : (answer === option.id);
+                  
+                  return (
+                    <label
+                      key={option.id}
+                      className={`flex items-start gap-4 p-4 rounded-lg border-2 transition-all cursor-pointer ${
+                        isSelected
+                          ? 'border-blue-600 bg-blue-50'
+                          : 'border-gray-200 bg-white hover:border-blue-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <input
+                        type={isMultiCorrect ? 'checkbox' : 'radio'}
+                        name={isMultiCorrect ? `question-${question.id}-${option.id}` : `question-${question.id}`}
+                        checked={isSelected}
+                        onChange={() => selectOption(question.id, option.id, isMultiCorrect)}
+                        className="w-5 h-5 mt-0.5 cursor-pointer accent-blue-600"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-blue-600">
+                            {String.fromCharCode(65 + idx)}.
+                          </span>
+                          <span className="text-gray-900">{option.optionText}</span>
+                        </div>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Navigation */}
+            <div className="flex items-center justify-between gap-4">
+              <Button
+                variant="secondary"
+                onClick={() => setCurrentQ((prev) => Math.max(0, prev - 1))}
+                disabled={currentQ === 0}
+              >
+                <ChevronLeft className="w-4 h-4 mr-2" />
+                Previous
+              </Button>
+
+              <div className="text-sm text-gray-600 font-medium">
+                {currentQ + 1} of {test.questions.length}
+              </div>
+
+              {currentQ < test.questions.length - 1 ? (
+                <Button 
+                  onClick={() => setCurrentQ((prev) => prev + 1)}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4 ml-2" />
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleSubmit}
+                  loading={submitting}
+                  className={`${
+                    answeredCount < test.questions.length
+                      ? 'bg-red-600 hover:bg-red-700'
+                      : 'bg-green-600 hover:bg-green-700'
+                  }`}
+                >
+                  {answeredCount < test.questions.length && (
+                    <>
+                      <AlertTriangle className="w-4 h-4 mr-2" />
+                      Warning:
+                    </>
+                  )}
+                  {answeredCount < test.questions.length ? ` ${test.questions.length - answeredCount} unanswered` : 'Submit Test'}
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
-      </Card>
-
-      {/* Navigation */}
-      <div className="flex items-center justify-between">
-        <Button
-          variant="secondary"
-          onClick={() => setCurrentQ((prev) => Math.max(0, prev - 1))}
-          disabled={currentQ === 0}
-        >
-          <ChevronLeft className="w-4 h-4 mr-1" />
-          Previous
-        </Button>
-
-        {currentQ < test.questions.length - 1 ? (
-          <Button onClick={() => setCurrentQ((prev) => prev + 1)}>
-            Next
-            <ChevronRight className="w-4 h-4 ml-1" />
-          </Button>
-        ) : (
-          <Button
-            onClick={handleSubmit}
-            loading={submitting}
-            variant={answeredCount < test.questions.length ? 'danger' : 'success'}
-          >
-            {answeredCount < test.questions.length && (
-              <AlertTriangle className="w-4 h-4 mr-1" />
-            )}
-            Submit Test
-          </Button>
-        )}
       </div>
     </div>
   );

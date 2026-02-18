@@ -20,22 +20,36 @@ A full-stack role-based MCQ testing platform with Spring Boot backend and React 
 
 - Java 21+
 - Maven 3.8+
-- MySQL 8+
 - Node.js 18+
+- Docker (optional, for running MySQL locally)
 
 ## Setup
 
 ### 1. Database
+
+**Option A: Docker (quick start)**
+```bash
+docker compose up -d db
+```
+This starts MySQL 8 with database `assessment_platform` on `localhost:3306` and persists data in a named volume.
+
+**Option B: Manual MySQL**
 ```sql
 CREATE DATABASE assessment_platform;
 ```
+
+The backend picks up database credentials from environment variables with sensible defaults:
+- `DB_URL` (default `jdbc:mysql://localhost:3306/assessment_platform?...`)
+- `DB_USERNAME` (default `root`)
+- `DB_PASSWORD` (default `12345678`)
 
 ### 2. Backend
 ```bash
 cd backend
 
-# Update database credentials in src/main/resources/application.yml
-# Update email credentials (optional for OTP)
+# Update .env / environment variables if you don't want the defaults
+# MAIL_USERNAME / MAIL_PASSWORD are needed for OTP emails
+# JWT_SECRET can override the default secret
 
 ./mvnw spring-boot:run
 # Or: mvn spring-boot:run
@@ -55,7 +69,7 @@ Frontend runs on: http://localhost:5173
 ## Seeded Data
 
 On startup, the backend seeds:
-- **5 Teams**: Development Team 1 & 2, Data Analyst Team 1 & 2, DevOps Team
+- **5 Teams**: Falconz, Beyonders, Eternals, La Masia's, Ariba
 - **1 Admin user**: admin@assessment.com / admin123
 
 ## Roles

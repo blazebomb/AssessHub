@@ -5,6 +5,7 @@ import { authService } from '../../services/authService';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Card from '../../components/ui/Card';
+import Footer from '../../components/Footer';
 import toast from 'react-hot-toast';
 import { ShieldCheck } from 'lucide-react';
 
@@ -33,7 +34,7 @@ export default function OtpPage() {
       const authData = res.data.data;
       login(authData);
       toast.success('Verified successfully!');
-      navigate(authData.role === 'ADMIN' || authData.role === 'TL' ? '/admin' : '/dashboard');
+      navigate(['ADMIN', 'TL', 'TR'].includes(authData.role) ? '/admin' : '/dashboard');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Invalid OTP');
     } finally {
@@ -70,6 +71,7 @@ export default function OtpPage() {
             </Button>
           </form>
         </Card>
+        <Footer />
       </div>
     </div>
   );

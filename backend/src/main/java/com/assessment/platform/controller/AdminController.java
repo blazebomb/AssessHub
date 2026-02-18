@@ -2,8 +2,10 @@ package com.assessment.platform.controller;
 
 import com.assessment.platform.dto.request.ChangeRoleRequest;
 import com.assessment.platform.dto.request.CreateTestRequest;
+import com.assessment.platform.dto.request.AiQuestionRequest;
 import com.assessment.platform.dto.response.*;
 import com.assessment.platform.service.AdminService;
+import com.assessment.platform.service.AiQuestionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +19,7 @@ import java.util.List;
 public class AdminController {
 
     private final AdminService adminService;
+    private final AiQuestionService aiQuestionService;
 
     @PostMapping("/tests")
     public ResponseEntity<ApiResponse<TestResponse>> createTest(@Valid @RequestBody CreateTestRequest request) {
@@ -60,5 +63,12 @@ public class AdminController {
     public ResponseEntity<ApiResponse<List<TeamResponse>>> getAllTeams() {
         List<TeamResponse> teams = adminService.getAllTeams();
         return ResponseEntity.ok(ApiResponse.success(teams));
+    }
+
+    @PostMapping("/ai-questions")
+    public ResponseEntity<ApiResponse<AiQuestionResponse>> generateAiQuestions(
+            @Valid @RequestBody AiQuestionRequest request) {
+        AiQuestionResponse response = aiQuestionService.generateQuestions(request);
+        return ResponseEntity.ok(ApiResponse.success("AI questions generated", response));
     }
 }

@@ -4,6 +4,7 @@ import Card, { CardTitle } from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Spinner from '../../components/ui/Spinner';
 import { FileText, Clock, Users, ChevronDown, ChevronUp } from 'lucide-react';
+import { roleLabel } from '../../utils/roleLabel';
 
 export default function ViewTestsPage() {
   const [tests, setTests] = useState([]);
@@ -57,7 +58,7 @@ export default function ViewTestsPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Badge variant="primary">{test.assignedRole}</Badge>
+                  <Badge variant="primary">{roleLabel(test.assignedRole)}</Badge>
                   <Badge variant="info">{test.assignedTeamName}</Badge>
                   <Badge variant={test.resultsReleased ? 'success' : 'warning'}>
                     {test.resultsReleased ? 'Released' : 'Pending'}

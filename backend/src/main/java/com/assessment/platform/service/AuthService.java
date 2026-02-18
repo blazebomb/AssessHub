@@ -57,22 +57,18 @@ public class AuthService {
                 .role(role)
                 .teamLeadName(request.getTeamLeadName())
                 .description(request.getDescription())
-                .using2FA(request.isEnable2FA())
+                .using2FA(true)
                 .build();
 
         user = userRepository.save(user);
 
-        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name(), user.getId(), team.getId());
+        String otp = otpService.generateOtp(user.getEmail());
+        emailService.sendOtpEmail(user.getEmail(), otp);
 
         return AuthResponse.builder()
-                .token(token)
                 .email(user.getEmail())
                 .name(user.getName())
-                .role(user.getRole().name())
-                .userId(user.getId())
-                .teamId(team.getId())
-                .teamName(team.getName())
-                .requires2FA(false)
+                .requires2FA(true)
                 .build();
     }
 
@@ -84,33 +80,13 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        if (user.isUsing2FA()) {
-            String otp = otpService.generateOtp(user.getEmail());
-            emailService.sendOtpEmail(user.getEmail(), otp);
-
-            return AuthResponse.builder()
-                    .email(user.getEmail())
-                    .name(user.getName())
-                    .requires2FA(true)
-                    .build();
-        }
-
-        String token = jwtUtil.generateToken(
-                user.getEmail(),
-                user.getRole().name(),
-                user.getId(),
-                user.getTeam() != null ? user.getTeam().getId() : null
-        );
+        String otp = otpService.generateOtp(user.getEmail());
+        emailService.sendOtpEmail(user.getEmail(), otp);
 
         return AuthResponse.builder()
-                .token(token)
                 .email(user.getEmail())
                 .name(user.getName())
-                .role(user.getRole().name())
-                .userId(user.getId())
-                .teamId(user.getTeam() != null ? user.getTeam().getId() : null)
-                .teamName(user.getTeam() != null ? user.getTeam().getName() : null)
-                .requires2FA(false)
+                .requires2FA(true)
                 .build();
     }
 

@@ -2,6 +2,7 @@ import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import { User, Mail, Users, Shield, Building } from 'lucide-react';
+import { roleLabel } from '../../utils/roleLabel';
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -53,7 +54,7 @@ export default function ProfilePage() {
               <Shield className="w-5 h-5 text-text-light" />
               <div>
                 <p className="text-sm text-text-light">Role</p>
-                <Badge variant={roleVariant[user?.role] || 'default'}>{user?.role}</Badge>
+                <Badge variant={roleVariant[user?.role] || 'default'}>{roleLabel(user?.role)}</Badge>
               </div>
             </div>
             <div className="flex items-center gap-3">

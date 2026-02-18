@@ -13,6 +13,8 @@ import java.util.Optional;
 public interface QuestionRepository extends JpaRepository<Question, Long> {
 
     List<Question> findByTestId(Long testId);
+
+    void deleteByTestId(Long testId);
     
     @Query("SELECT q FROM Question q LEFT JOIN FETCH q.options WHERE q.id = :id")
     Optional<Question> findByIdWithOptions(@Param("id") Long id);

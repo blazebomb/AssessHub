@@ -34,7 +34,7 @@ public class EmailService {
     }
 
     @Async
-    public void sendResultEmail(String to, String userName, String testTitle, int score, int totalMarks, String answerKey) {
+    public void sendResultEmail(String to, String userName, String testTitle, int score, int totalMarks) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(fromEmail);
@@ -44,9 +44,8 @@ public class EmailService {
                     "Dear %s,\n\n" +
                     "Your results for \"%s\" have been released.\n\n" +
                     "Score: %d / %d\n\n" +
-                    "--- Answer Key ---\n%s\n\n" +
                     "Regards,\nAssessment Platform",
-                    userName, testTitle, score, totalMarks, answerKey
+                    userName, testTitle, score, totalMarks
             ));
             mailSender.send(message);
             log.info("Result email sent to: {}", to);

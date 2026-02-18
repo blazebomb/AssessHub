@@ -29,13 +29,29 @@ public class DataSeeder implements CommandLineRunner {
 
     private void seedTeams() {
         if (teamRepository.count() == 0) {
-            teamRepository.save(Team.builder().name("Development Team 1").type(TeamType.DEV).build());
-            teamRepository.save(Team.builder().name("Development Team 2").type(TeamType.DEV).build());
-            teamRepository.save(Team.builder().name("Data Analyst Team 1").type(TeamType.DATA).build());
-            teamRepository.save(Team.builder().name("Data Analyst Team 2").type(TeamType.DATA).build());
-            teamRepository.save(Team.builder().name("DevOps Team").type(TeamType.DEVOPS).build());
+            teamRepository.save(Team.builder().name("Falconz").type(TeamType.DEV).build());
+            teamRepository.save(Team.builder().name("Beyonders").type(TeamType.DEV).build());
+            teamRepository.save(Team.builder().name("Eternals").type(TeamType.DATA).build());
+            teamRepository.save(Team.builder().name("La Masia's").type(TeamType.DATA).build());
+            teamRepository.save(Team.builder().name("Ariba").type(TeamType.DEVOPS).build());
             log.info("Teams seeded successfully");
+            return;
         }
+
+        updateTeamName("Development Team 1", "Falconz");
+        updateTeamName("Development Team 2", "Beyonders");
+        updateTeamName("Data Analyst Team 1", "Eternals");
+        updateTeamName("Data Analyst Team 2", "La Masia's");
+        updateTeamName("DevOps Team", "Ariba");
+        updateTeamName("Falcons", "Falconz");
+    }
+
+    private void updateTeamName(String oldName, String newName) {
+        teamRepository.findByName(oldName).ifPresent(team -> {
+            team.setName(newName);
+            teamRepository.save(team);
+            log.info("Updated team name: {} -> {}", oldName, newName);
+        });
     }
 
     private void seedAdmin() {

@@ -17,7 +17,8 @@ export default function RoleProtectedRoute({ children, roles }) {
   }
 
   if (!roles.includes(user.role)) {
-    return <Navigate to={user.role === 'ADMIN' ? '/admin' : '/dashboard'} replace />;
+    const isAdminLike = ['ADMIN', 'TL', 'TR'].includes(user.role);
+    return <Navigate to={isAdminLike ? '/admin' : '/dashboard'} replace />;
   }
 
   return children;

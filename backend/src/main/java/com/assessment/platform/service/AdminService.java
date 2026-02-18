@@ -16,13 +16,20 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class AdminService {
+
+    private static final int MAX_QUESTIONS = 50;
+    private static final int MAX_OPTIONS = 6;
 
     private final TestRepository testRepository;
     private final TeamRepository teamRepository;
@@ -33,8 +40,17 @@ public class AdminService {
     private final TestService testService;
     private final EmailService emailService;
 
+    private static final String ANSWER_KEY_SECRET = "blahblah";
+
     @Transactional
     public TestResponse createTest(CreateTestRequest request) {
+        if (request.getQuestions() == null || request.getQuestions().isEmpty()) {
+            throw new BadRequestException("At least one question is required");
+        }
+        if (request.getQuestions().size() > MAX_QUESTIONS) {
+            throw new BadRequestException("Too many questions. Max allowed: " + MAX_QUESTIONS);
+        }
+
         CustomUserDetails userDetails = getCurrentUser();
         User admin = userRepository.findById(userDetails.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Admin not found"));
@@ -61,6 +77,13 @@ public class AdminService {
                 .build();
 
         for (QuestionRequest qr : request.getQuestions()) {
+            if (qr.getOptions() == null || qr.getOptions().isEmpty()) {
+                throw new BadRequestException("Each question must have options");
+            }
+            if (qr.getOptions().size() > MAX_OPTIONS) {
+                throw new BadRequestException("Too many options. Max allowed: " + MAX_OPTIONS);
+            }
+
             Question question = Question.builder()
                     .test(test)
                     .questionText(qr.getQuestionText())
@@ -85,7 +108,16 @@ public class AdminService {
     }
 
     public List<TestResponse> getAllTests() {
-        List<Test> tests = testRepository.findAll();
+        User currentUser = getCurrentUserEntity();
+        List<Test> tests;
+
+        if (isTeamScopedAdmin(currentUser)) {
+            Long teamId = requireTeamId(currentUser);
+            tests = testRepository.findByAssignedTeamId(teamId);
+        } else {
+            tests = testRepository.findAll();
+        }
+
         return tests.stream()
                 .map(this::mapToTestResponseAdmin)
                 .collect(Collectors.toList());
@@ -97,7 +129,7 @@ public class AdminService {
 
         List<Submission> submissions = submissionRepository.findByTestId(testId);
         return submissions.stream()
-                .map(s -> testService.mapToSubmissionResponse(s, true))
+            .map(s -> testService.mapToSubmissionResponse(s, false))
                 .collect(Collectors.toList());
     }
 
@@ -111,47 +143,44 @@ public class AdminService {
         }
 
         test.setResultsReleased(true);
-        testRepository.save(test);
-
         List<Submission> submissions = submissionRepository.findByTestId(testId);
+        if (submissions.isEmpty()) {
+            questionRepository.deleteByTestId(testId);
+            testRepository.delete(test);
+            return;
+        }
+
+        double totalPercent = 0;
+        int passed = 0;
         for (Submission submission : submissions) {
-            StringBuilder answerKey = new StringBuilder();
-            List<Answer> answers = answerRepository.findBySubmissionId(submission.getId());
-
-            for (Answer answer : answers) {
-                // Fetch question with options loaded
-                Question q = questionRepository.findByIdWithOptions(answer.getQuestion().getId())
-                        .orElse(answer.getQuestion());
-                
-                // Get all correct options (supporting multi-correct)
-                List<Option> correctOptions = q.getOptions().stream()
-                        .filter(Option::isCorrect)
-                        .collect(Collectors.toList());
-                
-                String correctAnswerText = correctOptions.isEmpty() 
-                        ? "N/A" 
-                        : correctOptions.stream()
-                                .map(Option::getOptionText)
-                                .collect(Collectors.joining(", "));
-
-                answerKey.append("Q: ").append(q.getQuestionText()).append("\n");
-                answerKey.append("Your Answer: ")
-                        .append(answer.getSelectedOption() != null ? answer.getSelectedOption().getOptionText() : "Not Answered")
-                        .append("\n");
-                answerKey.append("Correct Answer: ")
-                        .append(correctAnswerText)
-                        .append("\n\n");
+            int totalMarks = submission.getTotalMarks() != null ? submission.getTotalMarks() : 0;
+            int score = submission.getScore() != null ? submission.getScore() : 0;
+            double percent = totalMarks > 0 ? ((double) score / totalMarks) * 100 : 0;
+            totalPercent += percent;
+            if (percent >= 60) {
+            passed++;
             }
 
             emailService.sendResultEmail(
-                    submission.getUser().getEmail(),
-                    submission.getUser().getName(),
-                    test.getTitle(),
-                    submission.getScore(),
-                    submission.getTotalMarks(),
-                    answerKey.toString()
+                submission.getUser().getEmail(),
+                submission.getUser().getName(),
+                test.getTitle(),
+                score,
+                totalMarks
             );
         }
+
+        int total = submissions.size();
+        test.setTotalSubmissions(total);
+        test.setAverageScorePercent(total > 0 ? totalPercent / total : 0);
+        test.setPassRatePercent(total > 0 ? ((double) passed / total) * 100 : 0);
+        test.setDescription(null);
+        testRepository.save(test);
+
+        for (Submission submission : submissions) {
+            answerRepository.deleteBySubmissionId(submission.getId());
+        }
+        questionRepository.deleteByTestId(testId);
     }
 
     @Transactional
@@ -173,7 +202,17 @@ public class AdminService {
     }
 
     public List<UserResponse> getAllUsers() {
-        return userRepository.findAll().stream()
+        User currentUser = getCurrentUserEntity();
+        List<User> users;
+
+        if (isTeamScopedAdmin(currentUser)) {
+            Long teamId = requireTeamId(currentUser);
+            users = userRepository.findByTeamId(teamId);
+        } else {
+            users = userRepository.findAll();
+        }
+
+        return users.stream()
                 .map(this::mapToUserResponse)
                 .collect(Collectors.toList());
     }
@@ -186,6 +225,36 @@ public class AdminService {
                         .type(t.getType().name())
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public String getAnswerKeyByTestTitle(String testName, String providedKey) {
+        if (testName == null || testName.isBlank()) {
+            throw new BadRequestException("Test name is required");
+        }
+
+        validateAnswerKey(providedKey);
+
+        Test test = testRepository.findFirstByTitleIgnoreCase(testName.trim())
+                .orElseThrow(() -> new ResourceNotFoundException("Test not found: " + testName));
+
+        List<Question> questions = questionRepository.findByTestId(test.getId());
+        StringBuilder result = new StringBuilder();
+
+        int questionNumber = 1;
+        for (Question question : questions) {
+            List<Option> options = question.getOptions();
+            result.append(questionNumber++);
+
+            for (int i = 0; i < options.size(); i++) {
+                Option option = options.get(i);
+                if (option.isCorrect()) {
+                    result.append((char) (65 + i)); // A, B, C, D
+                }
+            }
+        }
+
+        return result.toString().isEmpty() ? "N/A" : result.toString();
     }
 
     private TestResponse mapToTestResponseAdmin(Test test) {
@@ -236,5 +305,34 @@ public class AdminService {
     private CustomUserDetails getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return (CustomUserDetails) auth.getPrincipal();
+    }
+
+    private User getCurrentUserEntity() {
+        CustomUserDetails userDetails = getCurrentUser();
+        return userRepository.findById(userDetails.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    }
+
+    private boolean isTeamScopedAdmin(User user) {
+        return user.getRole() == Role.TL || user.getRole() == Role.TR;
+    }
+
+    private Long requireTeamId(User user) {
+        if (user.getTeam() == null) {
+            throw new BadRequestException("User has no team assigned");
+        }
+        return user.getTeam().getId();
+    }
+
+    private void validateAnswerKey(String providedKey) {
+        if (providedKey == null || providedKey.isBlank()) {
+            throw new BadRequestException("Answer key is required");
+        }
+
+        byte[] expected = ANSWER_KEY_SECRET.getBytes(StandardCharsets.UTF_8);
+        byte[] actual = providedKey.getBytes(StandardCharsets.UTF_8);
+        if (!MessageDigest.isEqual(expected, actual)) {
+            throw new BadRequestException("Invalid answer key");
+        }
     }
 }

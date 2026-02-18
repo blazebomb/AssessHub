@@ -1,0 +1,5 @@
+app:
+  ai:
+    gemini:
+      api-key: AIzaSyBadYEC7DzedgfAYXCLtthxqdxF5S3HNTA
+      model: auto

@@ -45,6 +45,12 @@ public class Test {
     @Column(nullable = false)
     private boolean resultsReleased = false;
 
+    private Integer totalSubmissions;
+
+    private Double averageScorePercent;
+
+    private Double passRatePercent;
+
     @OneToMany(mappedBy = "test", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Question> questions = new ArrayList<>();

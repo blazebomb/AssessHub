@@ -7,6 +7,7 @@ import Spinner from '../../components/ui/Spinner';
 import Select from '../../components/ui/Select';
 import toast from 'react-hot-toast';
 import { ClipboardList, Send } from 'lucide-react';
+import { roleLabel } from '../../utils/roleLabel';
 
 export default function SubmissionsPage() {
   const [tests, setTests] = useState([]);
@@ -83,7 +84,7 @@ export default function SubmissionsPage() {
               <option value="">Choose a test...</option>
               {tests.map((test) => (
                 <option key={test.id} value={test.id}>
-                  {test.title} — {test.assignedTeamName} ({test.assignedRole})
+                  {test.title} — {test.assignedTeamName} ({roleLabel(test.assignedRole)})
                 </option>
               ))}
             </Select>

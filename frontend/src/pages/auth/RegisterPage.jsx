@@ -10,6 +10,7 @@ import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 import Card from '../../components/ui/Card';
+import Footer from '../../components/Footer';
 import toast from 'react-hot-toast';
 import { GraduationCap } from 'lucide-react';
 import api from '../../services/api';
@@ -45,11 +46,11 @@ export default function RegisterPage() {
       setTeams(res.data.data || []);
     } catch {
       setTeams([
-        { id: 1, name: 'Development Team 1' },
-        { id: 2, name: 'Development Team 2' },
-        { id: 3, name: 'Data Analyst Team 1' },
-        { id: 4, name: 'Data Analyst Team 2' },
-        { id: 5, name: 'DevOps Team' },
+        { id: 1, name: 'Falconz' },
+        { id: 2, name: 'Beyonders' },
+        { id: 3, name: 'Eternals' },
+        { id: 4, name: "La Masia's" },
+        { id: 5, name: 'Ariba' },
       ]);
     }
   };
@@ -62,9 +63,14 @@ export default function RegisterPage() {
         teamId: parseInt(data.teamId),
       });
       const authData = res.data.data;
-      login(authData);
-      toast.success('Registration successful!');
-      navigate(authData.role === 'ADMIN' || authData.role === 'TL' ? '/admin' : '/dashboard');
+      if (authData.requires2FA) {
+        toast.success('OTP sent to your email');
+        navigate('/verify-otp', { state: { email: data.email } });
+      } else {
+        login(authData);
+        toast.success('Registration successful!');
+        navigate(['ADMIN', 'TL', 'TR'].includes(authData.role) ? '/admin' : '/dashboard');
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Registration failed');
     } finally {
@@ -119,7 +125,7 @@ export default function RegisterPage() {
               <option value="">Select a role</option>
               <option value="TRAINEE">Trainee</option>
               <option value="INTERN">Intern</option>
-              <option value="PPO">PPO</option>
+              <option value="PPO">Full-time</option>
               <option value="TL">Team Lead</option>
               <option value="TR">Team Representative</option>
             </Select>
@@ -141,6 +147,7 @@ export default function RegisterPage() {
               Sign In
             </Link>
           </p>
+          <Footer />
         </Card>
       </div>
     </div>

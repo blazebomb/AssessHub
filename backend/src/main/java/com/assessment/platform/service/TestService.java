@@ -62,8 +62,14 @@ public class TestService {
         }
 
         boolean submitted = submissionRepository.existsByUserIdAndTestId(user.getId(), test.getId());
+        
         if (submitted) {
             throw new BadRequestException("You have already submitted this test");
+        }
+
+        // Prevent taking test if results are released and user hasn't attempted it
+        if (test.isResultsReleased()) {
+            throw new BadRequestException("This test is closed. Results have been released and no further attempts are allowed");
         }
 
         return mapToTestResponse(test, false, false);
@@ -80,6 +86,11 @@ public class TestService {
 
         if (submissionRepository.existsByUserIdAndTestId(user.getId(), testId)) {
             throw new BadRequestException("You have already submitted this test");
+        }
+
+        // Prevent submission if results are released
+        if (test.isResultsReleased()) {
+            throw new BadRequestException("Cannot submit test - results have been released. Test is now closed for new attempts");
         }
 
         List<Question> questions = questionRepository.findByTestId(testId);
@@ -222,70 +233,71 @@ public class TestService {
         List<AnswerResponse> answerResponses = null;
         if (showAnswerKey) {
             List<Answer> answers = answerRepository.findBySubmissionId(submission.getId());
-            
-            // Group answers by question ID
-            Map<Long, List<Answer>> answersByQuestion = answers.stream()
-                    .collect(Collectors.groupingBy(a -> a.getQuestion().getId()));
-            
-            answerResponses = answersByQuestion.entrySet().stream()
-                    .map(entry -> {
-                        Long questionId = entry.getKey();
-                        List<Answer> questionAnswers = entry.getValue();
-                        
-                        // Fetch question with options eagerly loaded
-                        Question question = questionRepository.findByIdWithOptions(questionId)
-                                .orElseThrow(() -> new ResourceNotFoundException("Question not found: " + questionId));
-                        
-                        // Get all selected options for this question
-                        List<Long> selectedOptionIds = questionAnswers.stream()
-                                .map(a -> a.getSelectedOption() != null ? a.getSelectedOption().getId() : null)
-                                .filter(id -> id != null)
-                                .collect(Collectors.toList());
-                        
-                        List<String> selectedOptionTexts = questionAnswers.stream()
-                                .map(a -> a.getSelectedOption() != null ? a.getSelectedOption().getOptionText() : null)
-                                .filter(text -> text != null)
-                                .collect(Collectors.toList());
-                        
-                        // Get all correct options
-                        List<Option> correctOptions = question.getOptions().stream()
-                                .filter(Option::isCorrect)
-                                .collect(Collectors.toList());
-                        
-                        List<Long> correctOptionIds = correctOptions.stream()
-                                .map(Option::getId)
-                                .collect(Collectors.toList());
-                        
-                        List<String> correctOptionTexts = correctOptions.stream()
-                                .map(Option::getOptionText)
-                                .collect(Collectors.toList());
-                        
-                        // Check if answer is correct
-                        boolean isCorrect = !correctOptionIds.isEmpty()
-                                && selectedOptionIds.size() == correctOptionIds.size()
-                                && correctOptionIds.containsAll(selectedOptionIds);
-                        
-                        // For backward compatibility, set single values if only one option
-                        Long selectedOptionId = selectedOptionIds.size() == 1 ? selectedOptionIds.get(0) : null;
-                        String selectedOptionText = selectedOptionTexts.size() == 1 ? selectedOptionTexts.get(0) : null;
-                        Long correctOptionId = correctOptionIds.size() == 1 ? correctOptionIds.get(0) : null;
-                        String correctOptionText = correctOptionTexts.size() == 1 ? correctOptionTexts.get(0) : null;
-                        
-                        return AnswerResponse.builder()
-                                .questionId(questionId)
-                                .questionText(question.getQuestionText())
-                                .selectedOptionId(selectedOptionId)
-                                .selectedOptionText(selectedOptionText)
-                                .selectedOptionIds(selectedOptionIds)
-                                .selectedOptionTexts(selectedOptionTexts)
-                                .correctOptionId(correctOptionId)
-                                .correctOptionText(correctOptionText)
-                                .correctOptionIds(correctOptionIds)
-                                .correctOptionTexts(correctOptionTexts)
-                                .isCorrect(isCorrect)
-                                .build();
-                    })
-                    .collect(Collectors.toList());
+            if (!answers.isEmpty()) {
+                // Group answers by question ID
+                Map<Long, List<Answer>> answersByQuestion = answers.stream()
+                        .collect(Collectors.groupingBy(a -> a.getQuestion().getId()));
+
+                answerResponses = answersByQuestion.entrySet().stream()
+                        .map(entry -> {
+                            Long questionId = entry.getKey();
+                            List<Answer> questionAnswers = entry.getValue();
+
+                            // Fetch question with options eagerly loaded
+                            Question question = questionRepository.findByIdWithOptions(questionId)
+                                    .orElseThrow(() -> new ResourceNotFoundException("Question not found: " + questionId));
+
+                            // Get all selected options for this question
+                            List<Long> selectedOptionIds = questionAnswers.stream()
+                                    .map(a -> a.getSelectedOption() != null ? a.getSelectedOption().getId() : null)
+                                    .filter(id -> id != null)
+                                    .collect(Collectors.toList());
+
+                            List<String> selectedOptionTexts = questionAnswers.stream()
+                                    .map(a -> a.getSelectedOption() != null ? a.getSelectedOption().getOptionText() : null)
+                                    .filter(text -> text != null)
+                                    .collect(Collectors.toList());
+
+                            // Get all correct options
+                            List<Option> correctOptions = question.getOptions().stream()
+                                    .filter(Option::isCorrect)
+                                    .collect(Collectors.toList());
+
+                            List<Long> correctOptionIds = correctOptions.stream()
+                                    .map(Option::getId)
+                                    .collect(Collectors.toList());
+
+                            List<String> correctOptionTexts = correctOptions.stream()
+                                    .map(Option::getOptionText)
+                                    .collect(Collectors.toList());
+
+                            // Check if answer is correct
+                            boolean isCorrect = !correctOptionIds.isEmpty()
+                                    && selectedOptionIds.size() == correctOptionIds.size()
+                                    && correctOptionIds.containsAll(selectedOptionIds);
+
+                            // For backward compatibility, set single values if only one option
+                            Long selectedOptionId = selectedOptionIds.size() == 1 ? selectedOptionIds.get(0) : null;
+                            String selectedOptionText = selectedOptionTexts.size() == 1 ? selectedOptionTexts.get(0) : null;
+                            Long correctOptionId = correctOptionIds.size() == 1 ? correctOptionIds.get(0) : null;
+                            String correctOptionText = correctOptionTexts.size() == 1 ? correctOptionTexts.get(0) : null;
+
+                            return AnswerResponse.builder()
+                                    .questionId(questionId)
+                                    .questionText(question.getQuestionText())
+                                    .selectedOptionId(selectedOptionId)
+                                    .selectedOptionText(selectedOptionText)
+                                    .selectedOptionIds(selectedOptionIds)
+                                    .selectedOptionTexts(selectedOptionTexts)
+                                    .correctOptionId(correctOptionId)
+                                    .correctOptionText(correctOptionText)
+                                    .correctOptionIds(correctOptionIds)
+                                    .correctOptionTexts(correctOptionTexts)
+                                    .isCorrect(isCorrect)
+                                    .build();
+                        })
+                        .collect(Collectors.toList());
+            }
         }
 
         return SubmissionResponse.builder()

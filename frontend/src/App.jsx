@@ -26,7 +26,7 @@ function HomeRedirect() {
 
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role === 'ADMIN' || user.role === 'TL') {
+  if (user.role === 'ADMIN' || user.role === 'TL' || user.role === 'TR') {
     return <Navigate to="/admin" replace />;
   }
   return <Navigate to="/dashboard" replace />;
@@ -58,7 +58,7 @@ export default function App() {
           <Route
             path="/admin"
             element={
-              <RoleProtectedRoute roles={['ADMIN', 'TL']}>
+              <RoleProtectedRoute roles={['ADMIN', 'TL', 'TR']}>
                 <DashboardLayout />
               </RoleProtectedRoute>
             }
