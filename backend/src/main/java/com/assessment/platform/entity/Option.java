@@ -20,7 +20,7 @@ public class Option {
     @JoinColumn(name = "question_id", nullable = false)
     private Question question;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String optionText;
 
     @Column(nullable = false)

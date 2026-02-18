@@ -1,5 +1,5 @@
 app:
   ai:
     gemini:
-      api-key: AIzaSyBadYEC7DzedgfAYXCLtthxqdxF5S3HNTA
+      api-key: AIzaSyDqx3x5XLFtu9WHeiCuJ1kik1M9ZSuguoM
       model: auto

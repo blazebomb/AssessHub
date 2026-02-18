@@ -1,7 +1,6 @@
 com\assessment\platform\repository\TeamRepository.class
 com\assessment\platform\entity\Test$TestBuilder.class
 com\assessment\platform\entity\Test.class
-com\assessment\platform\service\AiQuestionService$GeminiGenerationConfig.class
 com\assessment\platform\dto\response\AiQuestionResponse$AiQuestionItem$AiQuestionItemBuilder.class
 com\assessment\platform\service\OtpService$OtpEntry.class
 com\assessment\platform\service\TestService.class
@@ -11,7 +10,6 @@ com\assessment\platform\dto\response\TestResponse.class
 com\assessment\platform\entity\Option.class
 com\assessment\platform\dto\response\werQuestionResponse$werQuestionResponseBuilder.class
 com\assessment\platform\dto\response\AuthResponse.class
-com\assessment\platform\service\AiQuestionService$GeminiCandidate.class
 com\assessment\platform\dto\request\RegisterRequest.class
 com\assessment\platform\dto\response\AiQuestionResponse.class
 com\assessment\platform\dto\response\QuestionResponse.class
@@ -30,7 +28,6 @@ com\assessment\platform\dto\response\AnswerResponse$AnswerResponseBuilder.class
 com\assessment\platform\entity\Question.class
 com\assessment\platform\repository\UserRepository.class
 com\assessment\platform\dto\request\SubmitTestRequest.class
-com\assessment\platform\service\AiQuestionService$GeminiPart.class
 com\assessment\platform\dto\response\AiQuestionResponse$AiQuestionItem.class
 com\assessment\platform\security\CustomUserDetailsService.class
 com\assessment\platform\dto\request\QuestionRequest.class
@@ -38,7 +35,6 @@ com\assessment\platform\entity\Submission.class
 com\assessment\platform\exception\GlobalExceptionHandler.class
 com\assessment\platform\entity\Team.class
 com\assessment\platform\repository\TestRepository.class
-com\assessment\platform\service\AdminService.class
 com\assessment\platform\AssessmentPlatformApplication.class
 com\assessment\platform\dto\response\OptionResponse$OptionResponseBuilder.class
 com\assessment\platform\service\AiQuestionService.class
@@ -46,7 +42,6 @@ com\assessment\platform\service\EmailService.class
 com\assessment\platform\controller\AuthController.class
 com\assessment\platform\dto\response\SubmissionResponse.class
 com\assessment\platform\entity\User.class
-com\assessment\platform\service\AiQuestionService$GeminiModelList.class
 com\assessment\platform\dto\request\CreateTestRequest.class
 com\assessment\platform\entity\Team$TeamBuilder.class
 com\assessment\platform\dto\response\UserResponse$UserResponseBuilder.class
@@ -64,15 +59,12 @@ com\assessment\platform\dto\response\UserResponse.class
 com\assessment\platform\controller\PublicController.class
 com\assessment\platform\dto\response\ApiResponse.class
 com\assessment\platform\repository\SubmissionRepository.class
-com\assessment\platform\service\AiQuestionService$GeminiContent.class
 com\assessment\platform\service\AuthService.class
 com\assessment\platform\dto\response\AnswerResponse.class
 com\assessment\platform\dto\response\TeamResponse$TeamResponseBuilder.class
 com\assessment\platform\dto\request\AnswerRequest.class
-com\assessment\platform\service\AiQuestionService$GeminiModel.class
 com\assessment\platform\dto\response\QuestionResponse$QuestionResponseBuilder.class
 com\assessment\platform\controller\TestController.class
-com\assessment\platform\service\AiQuestionService$GeminiResponse.class
 com\assessment\platform\dto\response\AiQuestionResponse$AiQuestionResponseBuilder.class
 com\assessment\platform\dto\response\werResponse.class
 com\assessment\platform\entity\Answer.class
@@ -81,9 +73,7 @@ com\assessment\platform\entity\Answer$AnswerBuilder.class
 com\assessment\platform\repository\QuestionRepository.class
 com\assessment\platform\dto\response\TestResponse$TestResponseBuilder.class
 com\assessment\platform\entity\Option$OptionBuilder.class
-com\assessment\platform\service\AiQuestionService$GeminiRequest.class
 com\assessment\platform\dto\response\werQuestionResponse.class
-com\assessment\platform\controller\AdminController.class
 com\assessment\platform\exception\DuplicateResourceException.class
 com\assessment\platform\dto\request\OptionRequest.class
 com\assessment\platform\entity\Question$QuestionBuilder.class

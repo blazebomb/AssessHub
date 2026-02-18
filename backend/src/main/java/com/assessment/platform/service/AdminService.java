@@ -335,4 +335,53 @@ public class AdminService {
             throw new BadRequestException("Invalid answer key");
         }
     }
+
+    public byte[] generateScoresCSV(Long testId) {
+        Test test = testRepository.findById(testId)
+                .orElseThrow(() -> new ResourceNotFoundException("Test not found"));
+
+        List<Submission> submissions = submissionRepository.findByTestId(testId);
+        
+        StringBuilder csv = new StringBuilder();
+        
+        // CSV Header
+        csv.append("Serial No.,User ID,User Name,Email,Role,Team,Score,Total Questions,Accuracy %,Submission Date\n");
+        
+        // CSV Body
+        int serialNo = 1;
+        for (Submission submission : submissions) {
+            User user = submission.getUser();
+            
+            csv.append(serialNo++).append(",");
+            csv.append(escapeCSV(user.getId().toString())).append(",");
+            csv.append(escapeCSV(user.getName())).append(",");
+            csv.append(escapeCSV(user.getEmail())).append(",");
+            csv.append(escapeCSV(user.getRole().toString())).append(",");
+            csv.append(escapeCSV(user.getTeam() != null ? user.getTeam().getName() : "N/A")).append(",");
+            csv.append(submission.getScore()).append(",");
+            csv.append(test.getQuestions().size()).append(",");
+            
+            // Calculate accuracy percentage
+            double accuracy = test.getQuestions().size() > 0 
+                ? (submission.getScore() / (double) test.getQuestions().size()) * 100 
+                : 0;
+            csv.append(String.format("%.2f", accuracy)).append(",");
+            
+            csv.append(submission.getEndTime()).append("\n");
+        }
+        
+        return csv.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    private String escapeCSV(String value) {
+        if (value == null) {
+            return "";
+        }
+        
+        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+        
+        return value;
+    }
 }

@@ -6,7 +6,7 @@ import Badge from '../../components/ui/Badge';
 import Spinner from '../../components/ui/Spinner';
 import Select from '../../components/ui/Select';
 import toast from 'react-hot-toast';
-import { ClipboardList, Send } from 'lucide-react';
+import { ClipboardList, Send, Download } from 'lucide-react';
 import { roleLabel } from '../../utils/roleLabel';
 
 export default function SubmissionsPage() {
@@ -16,6 +16,7 @@ export default function SubmissionsPage() {
   const [loading, setLoading] = useState(true);
   const [loadingSubs, setLoadingSubs] = useState(false);
   const [releasing, setReleasing] = useState(false);
+  const [downloadingCSV, setDownloadingCSV] = useState(false);
 
   useEffect(() => {
     fetchTests();
@@ -66,6 +67,34 @@ export default function SubmissionsPage() {
     }
   };
 
+  const handleDownloadCSV = async () => {
+    if (!selectedTestId) return;
+    setDownloadingCSV(true);
+    try {
+      const response = await adminService.downloadScoresCSV(selectedTestId);
+      
+      // Create blob from response
+      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
+      
+      // Create download link
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `test-scores-${selectedTestId}-${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success('CSV downloaded successfully!');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to download CSV');
+    } finally {
+      setDownloadingCSV(false);
+    }
+  };
+
   const selectedTest = tests.find((t) => t.id === parseInt(selectedTestId));
 
   if (loading) return <Spinner className="min-h-[60vh]" size="lg" />;
@@ -93,6 +122,12 @@ export default function SubmissionsPage() {
             <Button onClick={handleRelease} loading={releasing} variant="success">
               <Send className="w-4 h-4 mr-2" />
               Release Results
+            </Button>
+          )}
+          {selectedTest && (
+            <Button onClick={handleDownloadCSV} loading={downloadingCSV}>
+              <Download className="w-4 h-4 mr-2" />
+              Download CSV
             </Button>
           )}
         </div>

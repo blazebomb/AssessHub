@@ -9,6 +9,8 @@ import com.assessment.platform.service.AiQuestionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -70,5 +72,18 @@ public class AdminController {
             @Valid @RequestBody AiQuestionRequest request) {
         AiQuestionResponse response = aiQuestionService.generateQuestions(request);
         return ResponseEntity.ok(ApiResponse.success("AI questions generated", response));
+    }
+
+    @GetMapping("/tests/{id}/scores-csv")
+    public ResponseEntity<byte[]> downloadScoresCSV(@PathVariable Long id) {
+        byte[] csvContent = adminService.generateScoresCSV(id);
+        
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("text/csv;charset=UTF-8"));
+        headers.setContentDispositionFormData("attachment", "test-scores-" + id + ".csv");
+        
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(csvContent);
     }
 }

@@ -9,4 +9,5 @@ export const adminService = {
   getAllUsers: () => api.get('/admin/users'),
   getAllTeams: () => api.get('/admin/teams'),
   generateAiQuestions: (data) => api.post('/admin/ai-questions', data),
+  downloadScoresCSV: (testId) => api.get(`/admin/tests/${testId}/scores-csv`, { responseType: 'blob' }),
 };

@@ -17,13 +17,104 @@ export default function TakeTestPage() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [fullscreenWarnings, setFullscreenWarnings] = useState(0);
   const startTimeRef = useRef(new Date().toISOString());
   const timerRef = useRef(null);
+  const testContainerRef = useRef(null);
+
+  // Enter fullscreen on test load
+  useEffect(() => {
+    if (test && !submitted) {
+      enterFullscreen();
+    }
+  }, [test, submitted]);
+
+  // Monitor fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && test && !submitted) {
+        setFullscreenWarnings((prev) => {
+          const newCount = prev + 1;
+          
+          if (newCount >= 2) {
+            toast.error('Test auto-submitted due to exiting fullscreen multiple times');
+            handleSubmit();
+          } else {
+            toast.error(`Warning ${newCount}/2: Please stay in fullscreen mode. Test will be auto-submitted on next exit.`);
+            enterFullscreen();
+          }
+          
+          return newCount;
+        });
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, [test, submitted]);
+
+  // Prevent copy, cut, paste, and context menu
+  useEffect(() => {
+    const preventActions = (e) => {
+      e.preventDefault();
+      toast.error('This action is disabled during the test');
+    };
+
+    const preventKeyboardShortcuts = (e) => {
+      // Prevent Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+A, Ctrl+P, F12, etc.
+      if (
+        (e.ctrlKey && ['c', 'x', 'v', 'a', 'p', 's', 'u'].includes(e.key.toLowerCase())) ||
+        e.key === 'F12' ||
+        (e.ctrlKey && e.shiftKey && ['i', 'j', 'c'].includes(e.key.toLowerCase()))
+      ) {
+        e.preventDefault();
+        toast.error('This action is disabled during the test');
+      }
+    };
+
+    if (test && !submitted) {
+      document.addEventListener('copy', preventActions);
+      document.addEventListener('cut', preventActions);
+      document.addEventListener('paste', preventActions);
+      document.addEventListener('contextmenu', preventActions);
+      document.addEventListener('keydown', preventKeyboardShortcuts);
+    }
+
+    return () => {
+      document.removeEventListener('copy', preventActions);
+      document.removeEventListener('cut', preventActions);
+      document.removeEventListener('paste', preventActions);
+      document.removeEventListener('contextmenu', preventActions);
+      document.removeEventListener('keydown', preventKeyboardShortcuts);
+    };
+  }, [test, submitted]);
+
+  const enterFullscreen = async () => {
+    try {
+      if (testContainerRef.current && !document.fullscreenElement) {
+        await testContainerRef.current.requestFullscreen();
+      }
+    } catch (err) {
+      console.error('Failed to enter fullscreen:', err);
+      toast.error('Please allow fullscreen mode to take the test');
+    }
+  };
+
+  const exitFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      }
+    } catch (err) {
+      console.error('Failed to exit fullscreen:', err);
+    }
+  };
 
   useEffect(() => {
     fetchTest();
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      exitFullscreen();
     };
   }, [id]);
 
@@ -63,6 +154,7 @@ export default function TakeTestPage() {
         answers: answersPayload,
       });
       setSubmitted(true);
+      await exitFullscreen();
       toast.success('Test submitted successfully!');
       if (timerRef.current) clearInterval(timerRef.current);
       setTimeout(() => navigate('/dashboard/tests'), 1500);
@@ -152,7 +244,7 @@ export default function TakeTestPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
+    <div ref={testContainerRef} className="h-screen flex flex-col bg-gray-50 select-none" style={{ userSelect: 'none' }}>
       {/* Top Header */}
       <div className={`sticky top-0 z-40 ${isLowTime ? 'bg-red-600' : 'bg-blue-600'} text-white p-4 shadow-md`}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
